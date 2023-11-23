@@ -53,13 +53,23 @@
       </div>
     </div>
     <button class="btn btn-primary" @click="returnBike">Return Bike</button>
+    <notification-dialog
+      :showDialog="showReturnDialogModal"
+      :returnDialogMessage="returnDialogMessage"
+      @close="closeReturnDialog"
+    ></notification-dialog>
   </div>
 </template>
 
 <script>
 import ApiServices from 'src/services/ApiServices.js';
+import NotificationDialog from 'src/pages/NotificationDialog.vue';
+import store from 'src/store'; 
 
 export default {
+  components: {
+    NotificationDialog,
+  },
   props: {
     bike: {
       type: Object,
@@ -77,6 +87,9 @@ export default {
       selectedCity: '',
       stations: [],
       selectedStation: '',
+      showReturnDialogModal: false,
+      returnDialogMessage: '',
+      isInsertSuccessful: false,
     };
   },
   methods: {
@@ -117,6 +130,29 @@ export default {
           console.error('Error fetching data:', error);
         });
     },
+    closeReturnDialog() {
+      // Close the dialog
+      if (this.isInsertSuccessful) {
+        let null_data = {
+          bike: null,
+          start_country: null,
+          start_city: null,
+          start_station: null,
+          start_date: null,
+          already_rented: false,
+          end_country: null,
+          end_city: null,
+          end_station: null,
+          end_date: null,
+          member_casual: null,
+          start_station_id: null,
+          end_station_id: null,
+        }
+        localStorage.setItem('ride', JSON.stringify(null_data));
+        this.$emit('return');
+      }
+      this.showReturnDialogModal = false;
+    },
     async returnBike() {
       // Retrieve data from local storage
       const storedData = localStorage.getItem('ride');
@@ -137,29 +173,33 @@ export default {
       parsedData.start_date = new Date(parsedData.start_date).toISOString()
       parsedData.member_casual = "member"
       parsedData.end_station_id = end_station_id
+      parsedData.user_id = JSON.parse(store.getters.getUserData)["0"]["user_id"]
       console.log(parsedData)
 
       const response = await ApiServices.post("ride/add", parsedData);
       // this.message = response.message;
       console.log(response.message)
+      this.isInsertSuccessful = response.result;
+      this.returnDialogMessage = response.message;
+      this.showReturnDialogModal = true;
 
-      let null_data = {
-        bike: null,
-        start_country: null,
-        start_city: null,
-        start_station: null,
-        start_date: null,
-        already_rented: false,
-        end_country: null,
-        end_city: null,
-        end_station: null,
-        end_date: null,
-        member_casual: null,
-        start_station_id: null,
-        end_station_id: null,
-      }
-      localStorage.setItem('ride', JSON.stringify(null_data));
-      this.$emit('return');
+      // let null_data = {
+      //   bike: null,
+      //   start_country: null,
+      //   start_city: null,
+      //   start_station: null,
+      //   start_date: null,
+      //   already_rented: false,
+      //   end_country: null,
+      //   end_city: null,
+      //   end_station: null,
+      //   end_date: null,
+      //   member_casual: null,
+      //   start_station_id: null,
+      //   end_station_id: null,
+      // }
+      // localStorage.setItem('ride', JSON.stringify(null_data));
+      // this.$emit('return');
       // Implement logic to handle bike return
       // Disable the ReturnBike component
       // Enable the RentBike component
